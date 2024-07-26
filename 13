@@ -1,0 +1,171 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MATRIX_SIZE 2
+
+// Function to encrypt a message using Hill cipher
+void hillCipherEncrypt(char *plaintext, int key[MATRIX_SIZE][MATRIX_SIZE], char *ciphertext) {
+    int len = strlen(plaintext);
+    int i, j;
+    int block[MATRIX_SIZE];
+
+    // Pad the plaintext if necessary
+    if (len % MATRIX_SIZE != 0) {
+        int padding = MATRIX_SIZE - (len % MATRIX_SIZE);
+        for (i = 0; i < padding; i++) {
+            plaintext[len + i] = 'X'; // Use 'X' for padding
+        }
+        plaintext[len + padding] = '\0';
+        len += padding;
+    }
+
+    // Perform encryption on blocks of plaintext
+    for (i = 0; i < len; i += MATRIX_SIZE) {
+        // Form the block of plaintext (convert characters to numbers)
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            block[j] = plaintext[i + j] - 'A'; // Convert to 0-25 (A=0, B=1, ..., Z=25)
+        }
+
+        // Perform matrix multiplication with the key
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            int sum = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                sum += key[j][k] * block[k];
+            }
+            ciphertext[i + j] = (sum % 26) + 'A'; // Convert back to characters (A=0, B=1, ..., Z=25)
+        }
+    }
+    ciphertext[len] = '\0'; // Null-terminate the ciphertext
+}
+
+// Function to decrypt a message using Hill cipher
+void hillCipherDecrypt(char *ciphertext, int key[MATRIX_SIZE][MATRIX_SIZE], char *decryptedtext) {
+    int len = strlen(ciphertext);
+    int i, j;
+    int block[MATRIX_SIZE];
+    int adj[MATRIX_SIZE][MATRIX_SIZE];
+    int det, det_inv;
+
+    // Calculate determinant of the key matrix
+    det = key[0][0] * key[1][1] - key[0][1] * key[1][0];
+
+    // Find determinant modulo 26 (positive value)
+    det = (det % 26 + 26) % 26;
+
+    // Find modular inverse of determinant
+    det_inv = 1; // Assuming we know the modular inverse for the sake of demonstration
+
+    // Calculate adjugate matrix (transpose of cofactor matrix)
+    adj[0][0] = key[1][1];
+    adj[0][1] = -key[0][1];
+    adj[1][0] = -key[1][0];
+    adj[1][1] = key[0][0];
+
+    // Apply modular arithmetic to adjugate matrix
+    for (i = 0; i < MATRIX_SIZE; i++) {
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            adj[i][j] = (adj[i][j] * det_inv) % 26;
+            if (adj[i][j] < 0) {
+                adj[i][j] += 26; // Ensure positive result
+            }
+        }
+    }
+
+    // Perform decryption on blocks of ciphertext
+    for (i = 0; i < len; i += MATRIX_SIZE) {
+        // Form the block of ciphertext (convert characters to numbers)
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            block[j] = ciphertext[i + j] - 'A'; // Convert to 0-25 (A=0, B=1, ..., Z=25)
+        }
+
+        // Perform matrix multiplication with the adjugate key
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            int sum = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                sum += adj[j][k] * block[k];
+            }
+            decryptedtext[i + j] = (sum % 26) + 'A'; // Convert back to characters (A=0, B=1, ..., Z=25)
+        }
+    }
+    decryptedtext[len] = '\0'; // Null-terminate the decryptedtext
+}
+
+// Function to perform known-plaintext attack on Hill cipher
+void knownPlaintextAttack(char *plaintext, char *ciphertext, int key[MATRIX_SIZE][MATRIX_SIZE]) {
+    int i, j;
+    int block_p[MATRIX_SIZE], block_c[MATRIX_SIZE];
+    int inv_key[MATRIX_SIZE][MATRIX_SIZE];
+    int det, det_inv;
+
+    // Convert plaintext and ciphertext blocks to numbers
+    for (i = 0; i < MATRIX_SIZE; i++) {
+        block_p[i] = plaintext[i] - 'A';
+        block_c[i] = ciphertext[i] - 'A';
+    }
+
+    // Calculate determinant of the key matrix
+    det = key[0][0] * key[1][1] - key[0][1] * key[1][0];
+
+    // Find determinant modulo 26 (positive value)
+    det = (det % 26 + 26) % 26;
+
+    // Find modular inverse of determinant
+    det_inv = 1; // Assuming we know the modular inverse for the sake of demonstration
+
+    // Calculate adjugate matrix (transpose of cofactor matrix)
+    inv_key[0][0] = key[1][1];
+    inv_key[0][1] = -key[0][1];
+    inv_key[1][0] = -key[1][0];
+    inv_key[1][1] = key[0][0];
+
+    // Apply modular arithmetic to adjugate matrix
+    for (i = 0; i < MATRIX_SIZE; i++) {
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            inv_key[i][j] = (inv_key[i][j] * det_inv) % 26;
+            if (inv_key[i][j] < 0) {
+                inv_key[i][j] += 26; // Ensure positive result
+            }
+        }
+    }
+
+    // Perform known-plaintext attack to recover the key
+    for (i = 0; i < MATRIX_SIZE; i++) {
+        key[i][0] = 0;
+        key[i][1] = 0;
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            key[i][0] += inv_key[i][j] * block_p[j];
+            key[i][1] += inv_key[i][j] * block_c[j];
+        }
+        key[i][0] = key[i][0] % 26;
+        key[i][1] = key[i][1] % 26;
+        if (key[i][0] < 0) key[i][0] += 26;
+        if (key[i][1] < 0) key[i][1] += 26;
+    }
+}
+
+int main() {
+    // Key matrix for Hill cipher (2x2 matrix)
+    int key[MATRIX_SIZE][MATRIX_SIZE] = {
+        {9, 4},
+        {5, 7}
+    };
+
+    char plaintext[] = "MEETME";
+    char ciphertext[200] = "";
+
+    // Encrypt the plaintext using Hill cipher
+    hillCipherEncrypt(plaintext, key, ciphertext);
+    printf("Ciphertext generated:\n%s\n", ciphertext);
+
+    // Perform known-plaintext attack on Hill cipher
+    knownPlaintextAttack(plaintext, ciphertext, key);
+
+    // Output the recovered key
+    printf("\nRecovered key matrix:\n");
+    printf("%d %d\n", key[0][0], key[0][1]);
+    printf("%d %d\n", key[1][0], key[1][1]);
+
+    return 0;
+}
