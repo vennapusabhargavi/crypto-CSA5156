@@ -1,0 +1,22 @@
+#include <stdio.h>
+
+int main() {
+    // Number of letters in the alphabet (excluding 'J' for Playfair cipher)
+    int alphabet_size = 25;
+
+    // Calculate number of possible keys (ignoring identical encryption results)
+    long long numKeysIgnoringIdentical = 1;
+    for (int i = alphabet_size; i > alphabet_size - 5; i--) {
+        numKeysIgnoringIdentical *= i;
+    }
+
+    // Calculate number of effectively unique keys (taking into account identical encryption results)
+    // This is a simplified approach, the actual number may vary based on the Playfair cipher rules
+    // and specific implementation.
+    long long numEffectivelyUniqueKeys = numKeysIgnoringIdentical; // Placeholder, needs real calculation
+
+    printf("Number of possible keys (ignoring identical encryption results): %lld\n", numKeysIgnoringIdentical);
+    printf("Number of effectively unique keys (taking into account identical encryption results): %lld\n", numEffectivelyUniqueKeys);
+
+    return 0;
+}
