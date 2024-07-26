@@ -1,0 +1,72 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+
+// Function to generate the cipher alphabet based on a keyword
+void generateCipherAlphabet(char keyword[], char cipherAlphabet[]) {
+    int keywordLength = strlen(keyword);
+    int i, j;
+    int index = 0;
+    int used[ALPHABET_SIZE] = {0}; // Array to keep track of used letters
+
+    // Copy the keyword to the beginning of the cipher alphabet
+    strcpy(cipherAlphabet, keyword);
+
+    // Mark letters from the keyword as used
+    for (i = 0; i < keywordLength; i++) {
+        if (isalpha(keyword[i])) {
+            keyword[i] = toupper(keyword[i]); // Convert to uppercase
+            used[keyword[i] - 'A'] = 1;
+        }
+    }
+
+    // Fill the rest of the cipher alphabet with unused letters
+    for (i = 0; i < ALPHABET_SIZE; i++) {
+        if (!used[i]) {
+            cipherAlphabet[keywordLength + index] = 'A' + i;
+            index++;
+        }
+    }
+    cipherAlphabet[ALPHABET_SIZE] = '\0'; // Null-terminate the cipher alphabet
+}
+
+// Function to encrypt a message using the generated cipher alphabet
+void encrypt(char plaintext[], char cipherAlphabet[], char ciphertext[]) {
+    int i;
+    int length = strlen(plaintext);
+
+    for (i = 0; i < length; i++) {
+        if (isalpha(plaintext[i])) {
+            char originalChar = toupper(plaintext[i]);
+            if (originalChar >= 'A' && originalChar <= 'Z') {
+                ciphertext[i] = cipherAlphabet[originalChar - 'A'];
+            } else {
+                ciphertext[i] = plaintext[i]; // Non-alphabetical characters remain unchanged
+            }
+        } else {
+            ciphertext[i] = plaintext[i]; // Non-alphabetical characters remain unchanged
+        }
+    }
+    ciphertext[length] = '\0'; // Null-terminate the ciphertext
+}
+
+int main() {
+    char keyword[] = "CIPHER";
+    char plaintext[] = "HELLO WORLD";
+    char cipherAlphabet[ALPHABET_SIZE + 1]; // +1 for null terminator
+    char ciphertext[100]; // Sufficiently large buffer for ciphertext
+
+    // Generate the cipher alphabet based on the keyword
+    generateCipherAlphabet(keyword, cipherAlphabet);
+    printf("Generated Cipher Alphabet: %s\n", cipherAlphabet);
+
+    // Encrypt the plaintext
+    encrypt(plaintext, cipherAlphabet, ciphertext);
+    printf("Plaintext: %s\n", plaintext);
+    printf("Ciphertext: %s\n", ciphertext);
+
+    return 0;
+}
