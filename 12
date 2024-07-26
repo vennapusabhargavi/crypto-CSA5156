@@ -1,0 +1,126 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MATRIX_SIZE 2
+
+// Function to encrypt a message using Hill cipher
+void hillCipherEncrypt(char *plaintext, int key[MATRIX_SIZE][MATRIX_SIZE], char *ciphertext) {
+    int len = strlen(plaintext);
+    int i, j;
+    int block[MATRIX_SIZE];
+
+    // Pad the plaintext if necessary
+    if (len % MATRIX_SIZE != 0) {
+        int padding = MATRIX_SIZE - (len % MATRIX_SIZE);
+        for (i = 0; i < padding; i++) {
+            plaintext[len + i] = 'X'; // Use 'X' for padding
+        }
+        plaintext[len + padding] = '\0';
+        len += padding;
+    }
+
+    // Perform encryption on blocks of plaintext
+    for (i = 0; i < len; i += MATRIX_SIZE) {
+        // Form the block of plaintext (convert characters to numbers)
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            block[j] = plaintext[i + j] - 'A'; // Convert to 0-25 (A=0, B=1, ..., Z=25)
+        }
+
+        // Perform matrix multiplication with the key
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            int sum = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                sum += key[j][k] * block[k];
+            }
+            ciphertext[i + j] = (sum % 26) + 'A'; // Convert back to characters (A=0, B=1, ..., Z=25)
+        }
+    }
+    ciphertext[len] = '\0'; // Null-terminate the ciphertext
+}
+
+// Function to find the modular multiplicative inverse of a number under modulo m
+int modInverse(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++) {
+        if ((a * x) % m == 1) {
+            return x;
+        }
+    }
+    return -1; // No modular inverse exists
+}
+
+// Function to decrypt a message using Hill cipher
+void hillCipherDecrypt(char *ciphertext, int key[MATRIX_SIZE][MATRIX_SIZE], char *decryptedtext) {
+    int len = strlen(ciphertext);
+    int i, j;
+    int block[MATRIX_SIZE];
+    int adj[MATRIX_SIZE][MATRIX_SIZE];
+    int det, det_inv;
+
+    // Calculate determinant of the key matrix
+    det = key[0][0] * key[1][1] - key[0][1] * key[1][0];
+
+    // Find determinant modulo 26 (positive value)
+    det = (det % 26 + 26) % 26;
+
+    // Find modular inverse of determinant
+    det_inv = modInverse(det, 26);
+
+    // Calculate adjugate matrix (transpose of cofactor matrix)
+    adj[0][0] = key[1][1];
+    adj[0][1] = -key[0][1];
+    adj[1][0] = -key[1][0];
+    adj[1][1] = key[0][0];
+
+    // Apply modular arithmetic to adjugate matrix
+    for (i = 0; i < MATRIX_SIZE; i++) {
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            adj[i][j] = (adj[i][j] * det_inv) % 26;
+            if (adj[i][j] < 0) {
+                adj[i][j] += 26; // Ensure positive result
+            }
+        }
+    }
+
+    // Perform decryption on blocks of ciphertext
+    for (i = 0; i < len; i += MATRIX_SIZE) {
+        // Form the block of ciphertext (convert characters to numbers)
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            block[j] = ciphertext[i + j] - 'A'; // Convert to 0-25 (A=0, B=1, ..., Z=25)
+        }
+
+        // Perform matrix multiplication with the adjugate key
+        for (j = 0; j < MATRIX_SIZE; j++) {
+            int sum = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                sum += adj[j][k] * block[k];
+            }
+            decryptedtext[i + j] = (sum % 26) + 'A'; // Convert back to characters (A=0, B=1, ..., Z=25)
+        }
+    }
+    decryptedtext[len] = '\0'; // Null-terminate the decryptedtext
+}
+
+int main() {
+    // Key matrix for Hill cipher (2x2 matrix)
+    int key[MATRIX_SIZE][MATRIX_SIZE] = {
+        {9, 4},
+        {5, 7}
+    };
+
+    char plaintext[] = "meet me at the usual place at ten rather than eight oclock";
+    char ciphertext[200] = "";
+    char decryptedtext[200] = "";
+
+    // Encrypt the plaintext using Hill cipher
+    hillCipherEncrypt(plaintext, key, ciphertext);
+    printf("Encrypted ciphertext:\n%s\n", ciphertext);
+
+    // Decrypt the ciphertext using Hill cipher
+    hillCipherDecrypt(ciphertext, key, decryptedtext);
+    printf("Decrypted plaintext:\n%s\n", decryptedtext);
+
+    return 0;
+}
