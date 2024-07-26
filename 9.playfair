@@ -1,0 +1,81 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define GRID_SIZE 5
+
+// Function to find the coordinates (row, col) of a character in a given key grid
+void findPosition(char keyGrid[GRID_SIZE][GRID_SIZE], char letter, int *row, int *col) {
+    int i, j;
+    for (i = 0; i < GRID_SIZE; i++) {
+        for (j = 0; j < GRID_SIZE; j++) {
+            if (keyGrid[i][j] == letter) {
+                *row = i;
+                *col = j;
+                return;
+            }
+        }
+    }
+}
+
+// Function to decrypt a pair of ciphertext letters using a given key grid
+void decryptPair(char keyGrid[GRID_SIZE][GRID_SIZE], char pair[2], char decryptedPair[2]) {
+    int r1, c1, r2, c2;
+
+    // Find positions of both letters in the key grid
+    findPosition(keyGrid, pair[0], &r1, &c1);
+    findPosition(keyGrid, pair[1], &r2, &c2);
+
+    // Decryption rules based on Playfair cipher
+    if (r1 == r2) { // Same row
+        decryptedPair[0] = keyGrid[r1][(c1 + 4) % GRID_SIZE];
+        decryptedPair[1] = keyGrid[r2][(c2 + 4) % GRID_SIZE];
+    } else if (c1 == c2) { // Same column
+        decryptedPair[0] = keyGrid[(r1 + 4) % GRID_SIZE][c1];
+        decryptedPair[1] = keyGrid[(r2 + 4) % GRID_SIZE][c2];
+    } else { // Form a rectangle
+        decryptedPair[0] = keyGrid[r1][c2];
+        decryptedPair[1] = keyGrid[r2][c1];
+    }
+}
+
+// Function to decrypt a message using a given key grid
+void decryptMessage(char keyGrid[GRID_SIZE][GRID_SIZE], char *ciphertext, char *plaintext) {
+    int i, j;
+    int len = strlen(ciphertext);
+    char pair[2];
+    char decryptedPair[2];
+
+    for (i = 0, j = 0; i < len; i += 2, j += 2) {
+        pair[0] = ciphertext[i];
+        pair[1] = ciphertext[i + 1];
+
+        decryptPair(keyGrid, pair, decryptedPair);
+
+        plaintext[j] = decryptedPair[0];
+        plaintext[j + 1] = decryptedPair[1];
+    }
+    plaintext[j] = '\0';
+}
+
+int main() {
+    char ciphertext[] = "KXJEY UREBE ZWEHE WRYTU HEYFS KREHE GOYFI WTTTU OLKSY CAJPO BOTEI ZONTX BYBNT GONEY CUZWR GDSON SXBOU YWRHE BAAHY USEDQ";
+    char plaintext[200]; // Sufficiently large buffer for plaintext
+
+    // Playfair cipher key (5x5 grid)
+    char keyGrid[GRID_SIZE][GRID_SIZE] = {
+        {'K', 'X', 'J', 'E', 'Y'},
+        {'U', 'R', 'E', 'B', 'Z'},
+        {'W', 'H', 'R', 'Y', 'T'},
+        {'U', 'H', 'E', 'Y', 'F'},
+        {'S', 'K', 'R', 'E', 'H'}
+    };
+
+    // Decrypt the ciphertext
+    decryptMessage(keyGrid, ciphertext, plaintext);
+
+    // Output the decrypted plaintext
+    printf("Decrypted message:\n%s\n", plaintext);
+
+    return 0;
+}
