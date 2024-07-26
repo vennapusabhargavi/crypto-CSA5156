@@ -1,0 +1,81 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+
+// Function to calculate letter frequencies in a string
+void calculateFrequencies(char *text, double *freq) {
+    int len = strlen(text);
+    int total = 0;
+
+    // Initialize frequencies to zero
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = 0.0;
+    }
+
+    // Count occurrences of each letter
+    for (int i = 0; i < len; i++) {
+        if (isalpha(text[i])) {
+            freq[toupper(text[i]) - 'A']++;
+            total++;
+        }
+    }
+
+    // Calculate frequencies as percentages
+    if (total > 0) {
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            freq[i] = (freq[i] / total) * 100.0;
+        }
+    }
+}
+
+// Function to decrypt text with a given key (shift)
+void decryptText(char *ciphertext, int key, char *plaintext) {
+    int len = strlen(ciphertext);
+    for (int i = 0; i < len; i++) {
+        if (isalpha(ciphertext[i])) {
+            char base = isupper(ciphertext[i]) ? 'A' : 'a';
+            plaintext[i] = ((ciphertext[i] - base - key + ALPHABET_SIZE) % ALPHABET_SIZE) + base;
+        } else {
+            plaintext[i] = ciphertext[i]; // Non-alphabetic characters remain unchanged
+        }
+    }
+    plaintext[len] = '\0';
+}
+
+// Function to perform frequency analysis and print possible plaintexts
+void frequencyAttack(char *ciphertext, int topCount) {
+    double ciphertextFreq[ALPHABET_SIZE];
+    calculateFrequencies(ciphertext, ciphertextFreq);
+
+    // Perform decryption with each possible shift (0-25)
+    printf("Top %d possible plaintexts:\n", topCount);
+    for (int key = 0; key < ALPHABET_SIZE; key++) {
+        char plaintext[100] = "";
+        decryptText(ciphertext, key, plaintext);
+        
+        double plaintextFreq[ALPHABET_SIZE];
+        calculateFrequencies(plaintext, plaintextFreq);
+
+        // Calculate likelihood by comparing letter frequencies
+        double likelihood = 0.0;
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            likelihood += plaintextFreq[i] * ciphertextFreq[i];
+        }
+
+        // Print plaintext and likelihood
+        printf("Key = %2d, Likelihood = %.2f%%: %s\n", key, likelihood, plaintext);
+    }
+}
+
+int main() {
+    char ciphertext[] = "LCLLEWLJAZLQWTTKHAGWZXWTAAMRAGWZIYR";
+    int topCount = 10; // Number of top possible plaintexts to display
+
+    printf("Performing frequency attack on ciphertext:\n%s\n\n", ciphertext);
+    frequencyAttack(ciphertext, topCount);
+
+    return 0;
+}
