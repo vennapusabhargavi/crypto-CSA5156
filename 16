@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+
+// English letter frequencies (in percentage)
+const double englishFreq[ALPHABET_SIZE] = {
+    8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094, 6.966, 0.153, 0.772, 4.025,
+    2.406, 6.749, 7.507, 1.929, 0.095, 5.987, 6.327, 9.056, 2.758, 0.978, 2.360, 0.150,
+    1.974, 0.074
+};
+
+// Function to calculate letter frequencies in a string
+void calculateFrequencies(char *text, double *freq) {
+    int len = strlen(text);
+    int total = 0;
+
+    // Initialize frequencies to zero
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = 0.0;
+    }
+
+    // Count occurrences of each letter
+    for (int i = 0; i < len; i++) {
+        if (isalpha(text[i])) {
+            freq[toupper(text[i]) - 'A']++;
+            total++;
+        }
+    }
+
+    // Calculate frequencies as percentages
+    if (total > 0) {
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            freq[i] = (freq[i] / total) * 100.0;
+        }
+    }
+}
+
+// Function to perform frequency attack on monoalphabetic substitution cipher
+void frequencyAttack(char *ciphertext, int topCount) {
+    double ciphertextFreq[ALPHABET_SIZE];
+    calculateFrequencies(ciphertext, ciphertextFreq);
+
+    // Calculate likelihoods for each possible decryption key
+    double likelihoods[ALPHABET_SIZE];
+    for (int key = 0; key < ALPHABET_SIZE; key++) {
+        likelihoods[key] = 0.0;
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            int shiftedIndex = (i + key) % ALPHABET_SIZE;
+            likelihoods[key] += englishFreq[i] * ciphertextFreq[shiftedIndex];
+        }
+    }
+
+    // Find the top plaintexts based on likelihoods
+    printf("Top %d possible plaintexts:\n", topCount);
+    for (int k = 0; k < topCount; k++) {
+        int maxIndex = 0;
+        double maxLikelihood = -1.0;
+        
+        // Find the maximum likelihood
+        for (int key = 0; key < ALPHABET_SIZE; key++) {
+            if (likelihoods[key] > maxLikelihood) {
+                maxLikelihood = likelihoods[key];
+                maxIndex = key;
+            }
+        }
+
+        // Decrypt the ciphertext with the best key and print
+        char plaintext[100] = "";
+        for (int i = 0; i < strlen(ciphertext); i++) {
+            if (isalpha(ciphertext[i])) {
+                char base = isupper(ciphertext[i]) ? 'A' : 'a';
+                plaintext[i] = ((ciphertext[i] - base - maxIndex + ALPHABET_SIZE) % ALPHABET_SIZE) + base;
+            } else {
+                plaintext[i] = ciphertext[i]; // Non-alphabetic characters remain unchanged
+            }
+        }
+        plaintext[strlen(ciphertext)] = '\0';
+
+        printf("Key = %2d, Likelihood = %.2f%%: %s\n", maxIndex, maxLikelihood, plaintext);
+
+        // Set the likelihood to -1.0 so that it's not selected again
+        likelihoods[maxIndex] = -1.0;
+    }
+}
+
+int main() {
+    char ciphertext[] = "ZLWWL KL WYYC MLVW KLWML YCCTWQ LQVWTTWMLA";
+    int topCount = 10; // Number of top possible plaintexts to display
+
+    printf("Performing frequency attack on ciphertext:\n%s\n\n", ciphertext);
+    frequencyAttack(ciphertext, topCount);
+
+    return 0;
+}
