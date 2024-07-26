@@ -1,0 +1,98 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define BLOCK_SIZE 16
+
+void handleErrors(void) {
+    fprintf(stderr, "An error occurred\n");
+    exit(EXIT_FAILURE);
+}
+
+void pad(unsigned char *input, unsigned char *output, int length) {
+    int padding_length = BLOCK_SIZE - length % BLOCK_SIZE;
+    memcpy(output, input, length);
+    memset(output + length, padding_length, padding_length);
+}
+
+void print_data(const char *title, const void* data, int len) {
+    printf("%s: ", title);
+    const unsigned char *p = (const unsigned char*)data;
+    int i;
+    for (i=0; i<len; ++i)
+        printf("%02x ", *p++);
+    printf("\n");
+}
+
+void encrypt_decrypt_ecb(const unsigned char *key, const unsigned char *plaintext, unsigned char *ciphertext, int length) {
+    AES_KEY enc_key, dec_key;
+    unsigned char padded_plaintext[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    pad(plaintext, padded_plaintext, length);
+
+    AES_set_encrypt_key(key, 128, &enc_key);
+    for (int i = 0; i < length + BLOCK_SIZE; i += BLOCK_SIZE) {
+        AES_ecb_encrypt(padded_plaintext + i, ciphertext + i, &enc_key, AES_ENCRYPT);
+    }
+
+    AES_set_decrypt_key(key, 128, &dec_key);
+    unsigned char decryptedtext[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    for (int i = 0; i < length + BLOCK_SIZE; i += BLOCK_SIZE) {
+        AES_ecb_encrypt(ciphertext + i, decryptedtext + i, &dec_key, AES_DECRYPT);
+    }
+
+    print_data("ECB Decrypted", decryptedtext, length + BLOCK_SIZE);
+}
+
+void encrypt_decrypt_cbc(const unsigned char *key, const unsigned char *iv, const unsigned char *plaintext, unsigned char *ciphertext, int length) {
+    AES_KEY enc_key, dec_key;
+    unsigned char iv_copy[BLOCK_SIZE];
+    unsigned char padded_plaintext[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    pad(plaintext, padded_plaintext, length);
+
+    AES_set_encrypt_key(key, 128, &enc_key);
+    memcpy(iv_copy, iv, BLOCK_SIZE);
+    AES_cbc_encrypt(padded_plaintext, ciphertext, length + BLOCK_SIZE, &enc_key, iv_copy, AES_ENCRYPT);
+
+    AES_set_decrypt_key(key, 128, &dec_key);
+    memcpy(iv_copy, iv, BLOCK_SIZE);
+    unsigned char decryptedtext[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    AES_cbc_encrypt(ciphertext, decryptedtext, length + BLOCK_SIZE, &dec_key, iv_copy, AES_DECRYPT);
+
+    print_data("CBC Decrypted", decryptedtext, length + BLOCK_SIZE);
+}
+
+void encrypt_decrypt_cfb(const unsigned char *key, const unsigned char *iv, const unsigned char *plaintext, unsigned char *ciphertext, int length) {
+    AES_KEY key_struct;
+    unsigned char iv_copy[BLOCK_SIZE];
+    unsigned char padded_plaintext[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    pad(plaintext, padded_plaintext, length);
+
+    AES_set_encrypt_key(key, 128, &key_struct);
+    memcpy(iv_copy, iv, BLOCK_SIZE);
+    int num = 0;
+    AES_cfb128_encrypt(padded_plaintext, ciphertext, length + BLOCK_SIZE, &key_struct, iv_copy, &num, AES_ENCRYPT);
+
+    memcpy(iv_copy, iv, BLOCK_SIZE);
+    num = 0;
+    unsigned char decryptedtext[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    AES_cfb128_encrypt(ciphertext, decryptedtext, length + BLOCK_SIZE, &key_struct, iv_copy, &num, AES_DECRYPT);
+
+    print_data("CFB Decrypted", decryptedtext, length + BLOCK_SIZE);
+}
+
+int main() {
+    unsigned char key[BLOCK_SIZE] = "examplekey123456";
+    unsigned char iv[BLOCK_SIZE] = "exampleiv1234567";
+    unsigned char plaintext[] = "This is a test message for AES encryption modes.";
+    int length = strlen((char *)plaintext);
+
+    unsigned char ciphertext_ecb[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    unsigned char ciphertext_cbc[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+    unsigned char ciphertext_cfb[BLOCK_SIZE * ((length / BLOCK_SIZE) + 1)];
+
+    encrypt_decrypt_ecb(key, plaintext, ciphertext_ecb, length);
+    encrypt_decrypt_cbc(key, iv, plaintext, ciphertext_cbc, length);
+    encrypt_decrypt_cfb(key, iv, plaintext, ciphertext_cfb, length);
+
+    return 0;
+}
