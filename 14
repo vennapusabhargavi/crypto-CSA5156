@@ -1,0 +1,50 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Function to generate a random key stream
+void generateRandomKey(int *key, int length) {
+    srand(time(NULL));
+    for (int i = 0; i < length; i++) {
+        key[i] = rand() % 26; // Generate random number between 0 and 25
+    }
+}
+
+// Function to encrypt plaintext using the one-time pad Vigenère cipher
+void encryptVigenereOTP(char *plaintext, int *key, char *ciphertext) {
+    int len = strlen(plaintext);
+    for (int i = 0; i < len; i++) {
+        ciphertext[i] = 'A' + (plaintext[i] - 'A' + key[i]) % 26;
+    }
+    ciphertext[len] = '\0';
+}
+
+// Function to decrypt ciphertext using the one-time pad Vigenère cipher
+void decryptVigenereOTP(char *ciphertext, int *key, char *decryptedtext) {
+    int len = strlen(ciphertext);
+    for (int i = 0; i < len; i++) {
+        decryptedtext[i] = 'A' + (ciphertext[i] - 'A' - key[i] + 26) % 26;
+    }
+    decryptedtext[len] = '\0';
+}
+
+int main() {
+    char plaintext[] = "HELLOWORLD";
+    char ciphertext[100] = "";
+    char decryptedtext[100] = "";
+    int keyLength = strlen(plaintext);
+    int key[keyLength];
+
+    // Generate random key stream
+    generateRandomKey(key, keyLength);
+
+    // Encrypt plaintext
+    encryptVigenereOTP(plaintext, key, ciphertext);
+    printf("Encrypted ciphertext: %s\n", ciphertext);
+
+    // Decrypt ciphertext
+    decryptVigenereOTP(ciphertext, key, decryptedtext);
+    printf("Decrypted plaintext: %s\n", decryptedtext);
+
+    return 0;
+}
